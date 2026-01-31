@@ -6,20 +6,27 @@
 
 template <typename T>
 void rope_(T *out, const T *in, const int64_t *pos_ids, float theta, size_t seq_len, size_t n_head, size_t head_dim) {
+    size_t half_dim = head_dim / 2;
     for (size_t s = 0; s < seq_len; s++) {
         for (size_t h = 0; h < n_head; h++) {
-            float m = static_cast<float>(pos_ids[s]);
-            for (size_t d = 0; d < head_dim / 2; d++) {
-                float freq = 1.0f / (std::pow(theta, 2.0f * d / head_dim));
-                float angle = m * freq;
-                float cos_angle = std::cos(angle);
-                float sin_angle = std::sin(angle);
-                size_t index = s * n_head * head_dim + h * head_dim + 2 * d;
+            double m = static_cast<double>(pos_ids[s]);
+            size_t head_offset = s * n_head * head_dim + h * head_dim;
 
-                float x1 = llaisys::utils::cast<float>(in[index]);
-                float x2 = llaisys::utils::cast<float>(in[index + 1]);
-                out[index] = llaisys::utils::cast<T>(x1 * cos_angle - x2 * sin_angle);
-                out[index + 1] = llaisys::utils::cast<T>(x1 * sin_angle + x2 * cos_angle);
+            for (size_t d = 0; d < half_dim; d++) {
+                double freq = 1.0 / std::pow(static_cast<double>(theta), 2.0 * d / head_dim);
+                double angle = m * freq;
+
+                float cos_angle = static_cast<float>(std::cos(angle));
+                float sin_angle = static_cast<float>(std::sin(angle));
+
+                size_t idx1 = head_offset + d;
+                size_t idx2 = head_offset + d + half_dim;
+
+                float x1 = llaisys::utils::cast<float>(in[idx1]);
+                float x2 = llaisys::utils::cast<float>(in[idx2]);
+
+                out[idx1] = llaisys::utils::cast<T>(x1 * cos_angle - x2 * sin_angle);
+                out[idx2] = llaisys::utils::cast<T>(x1 * sin_angle + x2 * cos_angle);
             }
         }
     }
