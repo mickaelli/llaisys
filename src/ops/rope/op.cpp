@@ -27,6 +27,7 @@ void rope(tensor_t out, tensor_t in, tensor_t pos_ids, float theta) {
     switch (out->deviceType()) {
     case LLAISYS_DEVICE_CPU:
         return cpu::rope(out->data(), in->data(), pos_ids->data(), theta, seq_len, n_head, head_dim, out->dtype());
+#ifdef ENABLE_NVIDIA_API
     case LLAISYS_DEVICE_NVIDIA:
         TO_BE_IMPLEMENTED();
         return;
