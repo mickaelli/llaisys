@@ -9,7 +9,7 @@ from .llaisys_types import llaisysDeviceType_t, DeviceType
 from .llaisys_types import llaisysDataType_t, DataType
 from .llaisys_types import llaisysMemcpyKind_t, MemcpyKind
 from .llaisys_types import llaisysStream_t
-from .tensor import llaisysTensor_t
+from .tensor import llaisysTensor_t, LlaisysTensor
 from .tensor import load_tensor
 from .ops import load_ops
 
@@ -45,6 +45,7 @@ __all__ = [
     "LlaisysRuntimeAPI",
     "llaisysStream_t",
     "llaisysTensor_t",
+    "LlaisysTensor",
     "llaisysDataType_t",
     "DataType",
     "llaisysDeviceType_t",

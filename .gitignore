@@ -10,6 +10,8 @@ lib/
 *.dylib
 *.pyd
 
+# model
+model/
 # MacOS Cache
 .DS_Store
 

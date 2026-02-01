@@ -102,6 +102,7 @@ target("llaisys")
     add_deps("llaisys-core")
     add_deps("llaisys-tensor")
     add_deps("llaisys-ops")
+    add_files("src/llaisys/models/qwen2.cpp")
 
     set_languages("cxx17")
     set_warnings("all", "error")
