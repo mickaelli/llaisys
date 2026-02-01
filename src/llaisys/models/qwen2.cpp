@@ -170,7 +170,6 @@ struct LlaisysQwen2Weights *llaisysQwen2ModelWeights(struct LlaisysQwen2Model * 
 
 int64_t llaisysQwen2ModelInfer(struct LlaisysQwen2Model * model, int64_t * token_ids, size_t ntoken) {
     try {
-        size_t batch = 1;
         size_t seq_len = ntoken;
         size_t total_len = model->cur_pos + seq_len;
         
@@ -267,7 +266,7 @@ int64_t llaisysQwen2ModelInfer(struct LlaisysQwen2Model * model, int64_t * token
 
         model->cur_pos += seq_len;
 
-        int64_t next_token;
+        int64_t next_token=-1;
         if (model->device_type == LLAISYS_DEVICE_CPU) {
             next_token = *reinterpret_cast<int64_t*>(max_idx->data());
         }
