@@ -17,4 +17,10 @@ namespace nvidia {
 const LlaisysRuntimeAPI *getRuntimeAPI();
 }
 #endif
+
+#ifdef ENABLE_TIANSHU_API
+namespace tianshu {
+const LlaisysRuntimeAPI *getRuntimeAPI();
+}
+#endif
 } // namespace llaisys::device

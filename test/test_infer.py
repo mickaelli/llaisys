@@ -76,6 +76,10 @@ def llaisys_infer(
         temperature=temperature,
     )
 
+    # Guard against invalid tokens (e.g., native side returning -1 on error)
+    if any(t < 0 for t in outputs):
+        raise RuntimeError(f"llaisys generation produced invalid token(s): {outputs}")
+
     return outputs, tokenizer.decode(outputs, skip_special_tokens=True)
 
 

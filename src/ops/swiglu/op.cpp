@@ -2,6 +2,9 @@
 #include "../../core/llaisys_core.hpp" 
 #include "../../utils/check.hpp"
 #include "cpu/swiglu_cpu.hpp"
+#if defined(ENABLE_NVIDIA_API) || defined(ENABLE_TIANSHU_API)
+#include "nvidia/swiglu_nv.hpp"
+#endif
 namespace llaisys::ops {
 void swiglu(tensor_t out, tensor_t gate, tensor_t up) {
     CHECK_SAME_DEVICE(out,gate,up);
@@ -21,8 +24,11 @@ void swiglu(tensor_t out, tensor_t gate, tensor_t up) {
         return cpu::swiglu(out->data(), gate->data(), up->data(), out->numel(),out->dtype());
 #ifdef ENABLE_NVIDIA_API
     case LLAISYS_DEVICE_NVIDIA:
-        TO_BE_IMPLEMENTED();
-        return;
+        return nvidia::swiglu(out->data(), gate->data(), up->data(), out->numel(), out->dtype());
+#endif
+#ifdef ENABLE_TIANSHU_API
+    case LLAISYS_DEVICE_TIANSHU:
+        return nvidia::swiglu(out->data(), gate->data(), up->data(), out->numel(), out->dtype());
 #endif
     default:
         EXCEPTION_UNSUPPORTED_DEVICE;

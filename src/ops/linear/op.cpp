@@ -3,6 +3,9 @@
 #include "../../utils.hpp"
 
 #include "cpu/linear_cpu.hpp"
+#if defined(ENABLE_NVIDIA_API) || defined(ENABLE_TIANSHU_API)
+#include "nvidia/linear_nv.hpp"
+#endif
 
 namespace llaisys::ops {
 void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
@@ -36,8 +39,12 @@ void linear(tensor_t out, tensor_t in, tensor_t weight, tensor_t bias) {
         return cpu::linear(out->data(), in->data(), weight->data(),bias_data,M,N,K, out->dtype());
 #ifdef ENABLE_NVIDIA_API
     case LLAISYS_DEVICE_NVIDIA:
-        TO_BE_IMPLEMENTED();
-        return;
+        return nvidia::linear(out->data(), in->data(), weight->data(), bias_data, M, N, K, out->dtype());
+#endif
+#ifdef ENABLE_TIANSHU_API
+    case LLAISYS_DEVICE_TIANSHU:
+        // Tianshu (BI-CUDA) is source-compatible, reusing nvidia implementation
+        return nvidia::linear(out->data(), in->data(), weight->data(), bias_data, M, N, K, out->dtype());
 #endif
     default:
         EXCEPTION_UNSUPPORTED_DEVICE;

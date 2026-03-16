@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLAISYS Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b1526;
+      --bg-alt: #0f2433;
+      --panel: #111c2c;
+      --ink: #e9eef3;
+      --muted: #9fb3c5;
+      --accent: #10c2a1;
+      --accent-2: #f4a340;
+      --danger: #f45d5d;
+      --shadow: 0 16px 60px rgba(0, 0, 0, 0.35);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+      background: radial-gradient(circle at 20% 20%, rgba(16, 194, 161, 0.12), transparent 25%),
+                  radial-gradient(circle at 80% 0%, rgba(244, 163, 64, 0.14), transparent 30%),
+                  linear-gradient(135deg, var(--bg), #071019);
+      color: var(--ink);
+      display: flex;
+      justify-content: center;
+      padding: 32px 18px 42px;
+    }
+
+    .shell {
+      width: min(1400px, 100%);
+      display: flex;
+      flex-direction: row;
+      gap: 18px;
+      height: calc(100vh - 84px);
+    }
+
+    .sidebar {
+      width: 260px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .content-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, rgba(16, 194, 161, 0.14), rgba(244, 163, 64, 0.12));
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .badge {
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--bg);
+      background: var(--accent);
+      font-weight: 700;
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+      min-height: 0;
+    }
+
+    .panel {
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at 70% 20%, rgba(16, 194, 161, 0.08), transparent 35%);
+      opacity: 0.7;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+      letter-spacing: 0.2px;
+    }
+
+    .messages {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+
+    .bubble {
+      border-radius: 14px;
+      padding: 12px 14px;
+      line-height: 1.5;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      position: relative;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .bubble.user { align-self: flex-end; background: rgba(16, 194, 161, 0.14); border-color: rgba(16, 194, 161, 0.3); }
+    .bubble.assistant { align-self: flex-start; }
+    .bubble.system { align-self: center; max-width: 70%; }
+
+    .bubble .role {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .edit-btn {
+      font-size: 10px;
+      opacity: 0;
+      cursor: pointer;
+      color: var(--accent);
+      transition: opacity 0.2s;
+      background: none;
+      box-shadow: none;
+      padding: 2px 6px;
+    }
+
+    .bubble:hover .edit-btn { opacity: 1; }
+
+    .session-item {
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .session-item:hover { background: rgba(255, 255, 255, 0.06); }
+    .session-item.active { background: rgba(16, 194, 161, 0.12); border-color: var(--accent); }
+
+    .session-name {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 14px;
+      flex: 1;
+    }
+
+    .del-session {
+      font-size: 14px;
+      color: var(--muted);
+      padding: 4px;
+      opacity: 0.5;
+    }
+
+    .del-session:hover { color: var(--danger); opacity: 1; }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    textarea {
+      flex: 1;
+      min-height: 96px;
+      resize: vertical;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--ink);
+      padding: 12px;
+      font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border 0.15s ease, background 0.15s ease;
+    }
+
+    textarea:focus { border-color: rgba(16, 194, 161, 0.6); background: rgba(255, 255, 255, 0.05); }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      cursor: pointer;
+      transition: transform 0.1s ease, filter 0.2s ease, background 0.15s ease;
+      color: #0c121b;
+      background: linear-gradient(140deg, var(--accent), #0ef4c1);
+      box-shadow: 0 10px 30px rgba(16, 194, 161, 0.35);
+    }
+
+    button:active { transform: translateY(1px); }
+    button.secondary {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--ink);
+      box-shadow: none;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    input[type="number"] {
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--ink);
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    .status {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 6px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .right-align { justify-content: flex-end; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+      .messages { height: 360px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+       <button id="newSessionBtn" style="width:100%; margin-bottom: 10px;">+ New Chat</button>
+       <div id="sessionList" style="display:flex; flex-direction:column; gap:8px; overflow-y:auto; flex:1;">
+       </div>
+    </aside>
+
+    <div class="content-area">
+      <header>
+        <div class="brand">
+          <span class="badge">LLAISYS</span>
+          <div>
+            <div style="font-size: 18px; font-weight: 700;">Chat Console</div>
+            <div style="color: var(--muted); font-size: 13px;">Multi-session · Prefix Matching</div>
+          </div>
+        </div>
+        <div class="pill" id="status-pill">Ready</div>
+      </header>
+
+      <main>
+        <section class="panel" style="display:flex; flex-direction:column; gap:12px; min-height:0;">
+          <h2>Conversation</h2>
+          <div class="messages" id="messages"></div>
+        </section>
+
+        <section class="panel" style="display:flex; flex-direction:column;">
+          <h2>Controls</h2>
+          <div class="controls" style="flex:1; display:flex; flex-direction:column;">
+            <label style="flex:1; display:flex; flex-direction:column;">
+              Prompt
+              <textarea id="prompt" placeholder="Ask something..." style="flex:1;"></textarea>
+            </label>
+
+            <div class="grid-2">
+              <label>Max tokens
+                <input id="maxTokens" type="number" min="1" max="1024" value="256" />
+              </label>
+              <label>Temperature
+                <input id="temperature" type="number" step="0.05" min="0.01" max="2.0" value="0.8" />
+              </label>
+              <label>Top-K
+                <input id="topK" type="number" min="1" max="1024" value="50" />
+              </label>
+              <label>Top-P
+                <input id="topP" type="number" step="0.05" min="0.05" max="1.0" value="0.9" />
+              </label>
+            </div>
+
+            <label>Seed (optional)
+              <input id="seed" type="number" min="0" placeholder="Random if empty" />
+            </label>
+
+            <div class="input-row right-align">
+              <button class="secondary" id="resetBtn">Reset</button>
+              <button id="sendBtn">Send</button>
+            </div>
+
+            <div class="status" id="status"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    let sessions = JSON.parse(localStorage.getItem('llaisys_sessions')) || [];
+    let activeSessionId = localStorage.getItem('llaisys_active_id') || null;
+
+    const messagesEl = document.getElementById('messages');
+    const sessionListEl = document.getElementById('sessionList');
+    const promptEl = document.getElementById('prompt');
+    const statusEl = document.getElementById('status');
+    const statusPill = document.getElementById('status-pill');
+
+    function save() {
+      localStorage.setItem('llaisys_sessions', JSON.stringify(sessions));
+      localStorage.setItem('llaisys_active_id', activeSessionId);
+    }
+
+    function createSession() {
+      const id = Date.now().toString();
+      const newSession = {
+        id,
+        name: 'New Chat ' + (sessions.length + 1),
+        messages: [{ role: 'system', content: 'You are LLAISYS assistant.' }]
+      };
+      sessions.unshift(newSession);
+      activeSessionId = id;
+      save();
+      renderAll();
+    }
+
+    function deleteSession(e, id) {
+      e.stopPropagation();
+      sessions = sessions.filter(s => s.id !== id);
+      if (activeSessionId === id) {
+        activeSessionId = sessions.length > 0 ? sessions[0].id : null;
+      }
+      save();
+      renderAll();
+    }
+
+    function switchSession(id) {
+      activeSessionId = id;
+      save();
+      renderAll();
+    }
+
+    function renderAll() {
+      renderSessions();
+      renderMessages();
+    }
+
+    function renderSessions() {
+      sessionListEl.innerHTML = '';
+      sessions.forEach(s => {
+        const item = document.createElement('div');
+        item.className = `session-item ${s.id === activeSessionId ? 'active' : ''}`;
+        item.onclick = () => switchSession(s.id);
+
+        const name = document.createElement('div');
+        name.className = 'session-name';
+        name.textContent = s.name;
+        
+        const del = document.createElement('span');
+        del.className = 'del-session';
+        del.innerHTML = '&times;';
+        del.onclick = (e) => deleteSession(e, s.id);
+
+        item.appendChild(name);
+        item.appendChild(del);
+        sessionListEl.appendChild(item);
+      });
+    }
+
+    function renderMessages() {
+      messagesEl.innerHTML = '';
+      const session = sessions.find(s => s.id === activeSessionId);
+      if (!session) return;
+
+      session.messages.forEach((msg, idx) => {
+        const bubble = document.createElement('div');
+        bubble.className = `bubble ${msg.role}`;
+        
+        const roleHeader = document.createElement('span');
+        roleHeader.className = 'role';
+        
+        const roleName = document.createElement('span');
+        roleName.textContent = msg.role;
+        roleHeader.appendChild(roleName);
+
+        if (msg.role === 'user') {
+          const editBtn = document.createElement('button');
+          editBtn.className = 'edit-btn';
+          editBtn.textContent = 'Edit';
+          editBtn.onclick = () => editMessage(idx);
+          roleHeader.appendChild(editBtn);
+        }
+
+        const body = document.createElement('div');
+        body.textContent = msg.content;
+        
+        bubble.appendChild(roleHeader);
+        bubble.appendChild(body);
+        messagesEl.appendChild(bubble);
+      });
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function editMessage(idx) {
+      const session = sessions.find(s => s.id === activeSessionId);
+      if (!session) return;
+      
+      const content = session.messages[idx].content;
+      promptEl.value = content;
+      
+      // Truncate messages after this one
+      session.messages = session.messages.slice(0, idx);
+      save();
+      renderMessages();
+      promptEl.focus();
+    }
+
+    function setStatus(text, tone = 'info') {
+      statusEl.textContent = text;
+      const pillColors = {
+        info: 'var(--accent)',
+        busy: 'var(--accent-2)',
+        error: 'var(--danger)'
+      };
+      statusPill.style.background = pillColors[tone] || 'var(--accent)';
+      statusPill.textContent = tone === 'busy' ? 'Thinking...' : text;
+    }
+
+    async function sendMessage() {
+      const session = sessions.find(s => s.id === activeSessionId);
+      if (!session) {
+         createSession();
+         return sendMessage();
+      }
+
+      const prompt = promptEl.value.trim();
+      if (!prompt) return;
+
+      // Update session name if it's new
+      if (session.messages.length === 1 && session.name.startsWith('New Chat')) {
+        session.name = prompt.substring(0, 20) + (prompt.length > 20 ? '...' : '');
+        renderSessions();
+      }
+
+      session.messages.push({ role: 'user', content: prompt });
+      renderMessages();
+      promptEl.value = '';
+      save();
+
+      setStatus('Generating', 'busy');
+
+      const payload = {
+        messages: session.messages,
+        max_new_tokens: Number(document.getElementById('maxTokens').value) || 256,
+        top_k: Number(document.getElementById('topK').value) || 50,
+        top_p: Number(document.getElementById('topP').value) || 0.9,
+        temperature: Number(document.getElementById('temperature').value) || 0.8,
+      };
+      const seedVal = document.getElementById('seed').value;
+      if (seedVal !== '') {
+        payload.seed = Number(seedVal);
+      }
+
+      const assistantMsg = { role: 'assistant', content: '' };
+      session.messages.push(assistantMsg);
+      renderMessages();
+
+      try {
+        const res = await fetch('/api/chat/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || 'Request failed');
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let done = false;
+        let tokenCount = 0;
+        let buffer = '';
+        
+        const bubbles = messagesEl.querySelectorAll('.bubble.assistant');
+        const lastBubbleBody = bubbles[bubbles.length - 1].querySelector('div');
+
+        while (!done) {
+          const { value, done: readerDone } = await reader.read();
+          done = readerDone;
+          if (value) {
+            buffer += decoder.decode(value, { stream: !done });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const dataStr = line.slice(6);
+                if (dataStr === '[DONE]') continue;
+                try {
+                  const data = JSON.parse(dataStr);
+                  if (data.text) {
+                    assistantMsg.content += data.text;
+                    lastBubbleBody.textContent = assistantMsg.content;
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                  }
+                  if (data.token !== undefined) tokenCount++;
+                } catch(e) {}
+              }
+            }
+          }
+        }
+        save();
+        setStatus(`Done · Tokens: ${tokenCount}`);
+      } catch (err) {
+        console.error(err);
+        setStatus('Error: ' + err.message, 'error');
+        if (assistantMsg.content === '') {
+           session.messages.pop();
+           renderMessages();
+        }
+      }
+    }
+
+    document.getElementById('sendBtn').addEventListener('click', sendMessage);
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      const session = sessions.find(s => s.id === activeSessionId);
+      if (session) {
+        session.messages = [{ role: 'system', content: 'You are LLAISYS assistant.' }];
+        save();
+        renderMessages();
+        setStatus('Cleaned');
+      }
+    });
+
+    document.getElementById('newSessionBtn').addEventListener('click', createSession);
+
+    promptEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        sendMessage();
+      }
+    });
+
+    if (sessions.length === 0) {
+      createSession();
+    } else {
+      if (!activeSessionId) activeSessionId = sessions[0].id;
+      renderAll();
+    }
+  </script>
+</body>
+</html>

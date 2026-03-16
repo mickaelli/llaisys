@@ -1,5 +1,7 @@
 #include "llaisys/ops.h"
 
+#include <cstdint>
+
 #include "llaisys_tensor.hpp"
 
 #include "../ops/add/op.hpp"
@@ -11,6 +13,7 @@
 #include "../ops/rope/op.hpp"
 #include "../ops/self_attention/op.hpp"
 #include "../ops/swiglu/op.hpp"
+#include "../ops/sampling/op.hpp"
 
 __C {
     void llaisysAdd(llaisysTensor_t c, llaisysTensor_t a, llaisysTensor_t b) {
@@ -39,5 +42,8 @@ __C {
     }
     void llaisysSwiGLU(llaisysTensor_t out, llaisysTensor_t gate, llaisysTensor_t up) {
         llaisys::ops::swiglu(out->tensor, gate->tensor, up->tensor);
+    }
+    void llaisysSampling(llaisysTensor_t out_idx, llaisysTensor_t logits, int top_k, float top_p, float temperature, uint64_t seed) {
+        llaisys::ops::sampling(out_idx->tensor, logits->tensor, top_k, top_p, temperature, seed);
     }
 }

@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Sequence, Optional
 from ..libllaisys import LIB_LLAISYS
 from ..libllaisys import DeviceType
 import json
@@ -44,15 +44,31 @@ class LlaisysQwen2Weights(ctypes.Structure):
         ("mlp_down_w", ctypes.POINTER(ctypes.c_void_p)),
     ]
 
+
+class LlaisysSamplingParams(ctypes.Structure):
+    _fields_ = [
+        ("top_k", ctypes.c_int),
+        ("top_p", ctypes.c_float),
+        ("temperature", ctypes.c_float),
+        ("seed", ctypes.c_uint64),
+    ]
+
 LIB_LLAISYS.llaisysQwen2ModelCreate.argtypes = [ctypes.POINTER(LlaisysQwen2Meta), ctypes.c_int, ctypes.POINTER(ctypes.c_int), ctypes.c_int]
 LIB_LLAISYS.llaisysQwen2ModelCreate.restype = ctypes.c_void_p
 
 LIB_LLAISYS.llaisysQwen2ModelDestroy.argtypes = [ctypes.c_void_p]
 
+LIB_LLAISYS.llaisysQwen2ModelReset.argtypes = [ctypes.c_void_p]
+
 LIB_LLAISYS.llaisysQwen2ModelWeights.argtypes = [ctypes.c_void_p]
 LIB_LLAISYS.llaisysQwen2ModelWeights.restype = ctypes.POINTER(LlaisysQwen2Weights)
 
-LIB_LLAISYS.llaisysQwen2ModelInfer.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int64), ctypes.c_size_t]
+LIB_LLAISYS.llaisysQwen2ModelInfer.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int64),
+    ctypes.c_size_t,
+    ctypes.POINTER(LlaisysSamplingParams),
+]
 LIB_LLAISYS.llaisysQwen2ModelInfer.restype = ctypes.c_int64
 
 
@@ -79,7 +95,9 @@ class Qwen2:
         self.meta.end_token = config.get("eos_token_id", 151643) 
 
         self.model_ptr = LIB_LLAISYS.llaisysQwen2ModelCreate(ctypes.byref(self.meta), device.value, None, 0)
-        
+        if not self.model_ptr:
+            raise RuntimeError("llaisysQwen2ModelCreate returned null; see stderr for C++ side errors (likely CUDA/device init)")
+
         self.weights_ptr = LIB_LLAISYS.llaisysQwen2ModelWeights(self.model_ptr)
         self.weights = self.weights_ptr.contents 
 
@@ -147,6 +165,10 @@ class Qwen2:
         if hasattr(self, "model_ptr") and self.model_ptr:
             LIB_LLAISYS.llaisysQwen2ModelDestroy(self.model_ptr)
 
+    def reset(self):
+        if hasattr(self, "model_ptr") and self.model_ptr:
+            LIB_LLAISYS.llaisysQwen2ModelReset(self.model_ptr)
+
     def generate(
         self,
         inputs: Sequence[int],
@@ -154,19 +176,61 @@ class Qwen2:
         top_k: int = 1,
         top_p: float = 0.8,
         temperature: float = 0.8,
+        seed: Optional[int] = None,
     ):
         tokens = list(inputs)
 
+        sampling = LlaisysSamplingParams(
+            top_k=top_k,
+            top_p=top_p,
+            temperature=temperature,
+            seed=0 if seed is None else seed,
+        )
+        sampling_ptr = ctypes.byref(sampling)
+
         input_ids = (ctypes.c_int64 * len(tokens))(*tokens)
-        next_token = LIB_LLAISYS.llaisysQwen2ModelInfer(self.model_ptr, input_ids, len(tokens))
+        next_token = LIB_LLAISYS.llaisysQwen2ModelInfer(self.model_ptr, input_ids, len(tokens), sampling_ptr)
         tokens.append(next_token)
         
         for _ in range(max_new_tokens - 1):
             if next_token == self.meta.end_token:
                 break
                 
-            input_ids = (ctypes.c_int64 * 1)(next_token)
-            next_token = LIB_LLAISYS.llaisysQwen2ModelInfer(self.model_ptr, input_ids, 1)
+            input_ids = (ctypes.c_int64 * len(tokens))(*tokens)
+            next_token = LIB_LLAISYS.llaisysQwen2ModelInfer(self.model_ptr, input_ids, len(tokens), sampling_ptr)
             tokens.append(next_token)
 
         return tokens
+
+    def stream_generate(
+        self,
+        inputs: Sequence[int],
+        max_new_tokens: int = 100,
+        top_k: int = 1,
+        top_p: float = 0.8,
+        temperature: float = 0.8,
+        seed: Optional[int] = None,
+    ):
+        sampling = LlaisysSamplingParams(
+            top_k=top_k,
+            top_p=top_p,
+            temperature=temperature,
+            seed=0 if seed is None else seed,
+        )
+        sampling_ptr = ctypes.byref(sampling)
+
+        tokens = list(inputs)
+        input_ids = (ctypes.c_int64 * len(tokens))(*tokens)
+        next_token = LIB_LLAISYS.llaisysQwen2ModelInfer(self.model_ptr, input_ids, len(tokens), sampling_ptr)
+        if next_token == self.meta.end_token:
+            return
+        tokens.append(next_token)
+        yield next_token
+        
+        for _ in range(max_new_tokens - 1):
+            input_ids = (ctypes.c_int64 * len(tokens))(*tokens)
+            next_token = LIB_LLAISYS.llaisysQwen2ModelInfer(self.model_ptr, input_ids, len(tokens), sampling_ptr)
+            if next_token == self.meta.end_token:
+                break
+            tokens.append(next_token)
+            yield next_token

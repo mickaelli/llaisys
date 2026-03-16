@@ -2,6 +2,7 @@
 #define LLAISYS_OPS_H
 
 #include "tensor.h"
+#include <stdint.h>
 
 __C {
     __export void llaisysAdd(llaisysTensor_t c, llaisysTensor_t a, llaisysTensor_t b);
@@ -13,6 +14,7 @@ __C {
     __export void llaisysROPE(llaisysTensor_t out, llaisysTensor_t in, llaisysTensor_t pos_ids, float theta);
     __export void llaisysSelfAttention(llaisysTensor_t attn_val, llaisysTensor_t q, llaisysTensor_t k, llaisysTensor_t v, float scale);
     __export void llaisysSwiGLU(llaisysTensor_t out, llaisysTensor_t gate, llaisysTensor_t up);
+    __export void llaisysSampling(llaisysTensor_t out_idx, llaisysTensor_t logits, int top_k, float top_p, float temperature, uint64_t seed);
 }
 
 #endif

@@ -89,8 +89,8 @@ class LlaisysTensor:
 
     def __init__(
         self,
-        ptr: c_void_p | int | None = None,
-        shape: tuple[int, ...] | list[int] | None = None,
+        ptr: ctypes.c_void_p = None,
+        shape: list[int] = None,
         dtype: DataType = DataType.F32,
         device_type: DeviceType = DeviceType.CPU,
         device_id: int = 0,

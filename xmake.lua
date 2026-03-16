@@ -7,17 +7,14 @@ add_includedirs("include")
 includes("xmake/cpu.lua")
 
 -- NVIDIA --
-option("nv-gpu")
-    set_default(false)
-    set_showmenu(true)
-    set_description("Whether to compile implementations for Nvidia GPU")
-option_end()
+includes("xmake/nvidia.lua")
 
-if has_config("nv-gpu") then
-    add_defines("ENABLE_NVIDIA_API")
-    includes("xmake/nvidia.lua")
-end
+-- TIANSHU --
+includes("xmake/tianshu.lua")
 
+-- =========================================================================================
+
+-- build util static library
 target("llaisys-utils")
     set_kind("static")
 
@@ -37,7 +34,14 @@ target("llaisys-device")
     set_kind("static")
     add_deps("llaisys-utils")
     add_deps("llaisys-device-cpu")
-
+    if has_config("nv-gpu") then
+        add_defines("ENABLE_NVIDIA_API")
+        add_rules("with_nvidia")
+    end
+    if has_config("tianshu") then
+        add_defines("ENABLE_TIANSHU_API")
+        add_rules("with_tianshu")
+    end
     set_languages("cxx17")
     set_warnings("all", "error")
     if not is_plat("windows") then
@@ -83,6 +87,12 @@ target_end()
 target("llaisys-ops")
     set_kind("static")
     add_deps("llaisys-ops-cpu")
+    if has_config("nv-gpu") then
+        add_defines("ENABLE_NVIDIA_API")
+    end
+    if has_config("tianshu") then
+        add_defines("ENABLE_TIANSHU_API")
+    end
 
     set_languages("cxx17")
     set_warnings("all", "error")
@@ -103,8 +113,20 @@ target("llaisys")
     add_deps("llaisys-tensor")
     add_deps("llaisys-ops")
     add_files("src/llaisys/models/qwen2.cpp")
-
+    if has_config("nv-gpu") then
+        add_defines("ENABLE_NVIDIA_API")
+        add_rules("with_nvidia")
+        add_files("src/device/nvidia/**.cu", "src/ops/**/nvidia/*.cu")
+    end
+    if has_config("tianshu") then
+        add_defines("ENABLE_TIANSHU_API")
+        -- Tianshu runtime cpp
+        add_files("src/device/tianshu/*.cpp")
+        -- Reuse nvidia operator source for Tianshu
+        add_files("src/ops/**/nvidia/*.cu")
+    end
     set_languages("cxx17")
+    add_cuflags("-std=c++17",{force = true})
     set_warnings("all", "error")
     add_files("src/llaisys/*.cc")
     set_installdir(".")
